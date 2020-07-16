@@ -1,4 +1,6 @@
-#!/bin/sh
+#!/bin/bash
+
+server="14.18.242.35 58.218.203.5"
 
 GNB_DIR=$(dirname $0)
 
@@ -18,30 +20,45 @@ GNB_BINARY=Linux_x86_64
 #GNB_BINARY=openwrt/x86_64
 #GNB_BINARY=openwrt/ramips-mt76x8
 
+config(){
+    echo "Input node number:"
+    read x
+    if [[ `echo "$x"|grep "^[0-9]*$"|wc -l` = 0 ]] || [[ $x = "" ]];then
+        echo "no content!"
+        config
+    else
+        rm -rf ${GNB_DIR}/conf/*
+        for ((i=1;i<=$x;i++))
+        do
+            mkdir -p ${GNB_DIR}/conf/100$i/ed25519/
+            mkdir -p ${GNB_DIR}/conf/100$i/security/
+            mkdir -p ${GNB_DIR}/conf/100$i/script/
+
+            cp -r ${GNB_DIR}/conf_tpl/1001/script/* ${GNB_DIR}/conf/100$i/script/
 
 
-mkdir -p ${GNB_DIR}/conf/1001/ed25519/
-mkdir -p ${GNB_DIR}/conf/1002/ed25519/
-mkdir -p ${GNB_DIR}/conf/1003/ed25519/
+            echo "listen 9001" > ${GNB_DIR}/conf/100$i/node.conf
+            echo "nodeid 100$i" >> ${GNB_DIR}/conf/100$i/node.conf
 
-mkdir -p ${GNB_DIR}/conf/1001/security/
-mkdir -p ${GNB_DIR}/conf/1002/security/
-mkdir -p ${GNB_DIR}/conf/1003/security/
+            for k in $server
+            do
+                echo "i|0|$k|9001" >> ${GNB_DIR}/conf/100$i/address.conf
+            done
 
+            ${GNB_DIR}/bin/$GNB_BINARY/gnb_crypto -c -p 100$i.private -k 100$i.public
 
-cp -r ${GNB_DIR}/conf_tpl/* ${GNB_DIR}/conf
+        done
+        for ((i=1;i<=$x;i++))
+        do
+            for ((j=1;j<=$x;j++))
+            do
+                echo "100$j|10.10.0.$j|255.255.255.0" >> ${GNB_DIR}/conf/100$i/route.conf
+            done
+            cp 100*.public ${GNB_DIR}/conf/100$i/ed25519/
 
-
-${GNB_DIR}/bin/$GNB_BINARY/gnb_crypto -c -p 1001.private -k 1001.public
-${GNB_DIR}/bin/$GNB_BINARY/gnb_crypto -c -p 1002.private -k 1002.public
-${GNB_DIR}/bin/$GNB_BINARY/gnb_crypto -c -p 1003.private -k 1003.public
-
-cp 1001.public 1002.public 1003.public ${GNB_DIR}/conf/1001/ed25519/
-cp 1001.public 1002.public 1003.public ${GNB_DIR}/conf/1002/ed25519/
-cp 1001.public 1002.public 1003.public ${GNB_DIR}/conf/1003/ed25519/
-
-
-mv 1001.public 1001.private ${GNB_DIR}/conf/1001/security/
-mv 1002.public 1002.private ${GNB_DIR}/conf/1002/security/
-mv 1003.public 1003.private ${GNB_DIR}/conf/1003/security/
-
+            cp 100$i.public 100$i.private ${GNB_DIR}/conf/100$i/security/
+        done
+        rm *.public *.private
+    fi
+}
+config
