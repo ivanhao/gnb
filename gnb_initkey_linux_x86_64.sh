@@ -19,7 +19,11 @@ GNB_BINARY=Linux_x86_64
 #GNB_BINARY=openwrt/mvebu-cortexa9
 #GNB_BINARY=openwrt/x86_64
 #GNB_BINARY=openwrt/ramips-mt76x8
-
+v6=`sysctl -a|egrep "all.disable_ipv6 = 0$"|wc -l`
+if [ $v6 = 0 ];then
+    echo "net.ipv6.conf.all.disable_ipv6 = 0" >> /etc/sysctl.conf
+    sysctl -p
+fi
 config(){
     echo "Input node number:"
     read x
